@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "labelPrintFrontend"
+		},
+		{
+			"path": "label-print-backend"
+		}
+	],
+	"settings": {
+		"java.configuration.updateBuildConfiguration": "interactive"
+	}
+}
