@@ -1,11 +1,12 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Article } from '../../types';
+import { Article, CartItem } from '../../types';
 import { articleService, Localidad } from '../../services/articleService';
 
 interface SearchState {
   query: string;
   localidad: Localidad;
   result: Article | null;
+  cart: CartItem[];
   loading: boolean;
   error: string | null;
 }
@@ -14,6 +15,7 @@ const initialState: SearchState = {
   query: '',
   localidad: 'la-ceiba',
   result: null,
+  cart: [],
   loading: false,
   error: null,
 };
@@ -50,6 +52,36 @@ const searchSlice = createSlice({
       state.result = null;
       state.error = null;
     },
+    addToCart: (state, action: PayloadAction<Article>) => {
+      const existing = state.cart.findIndex(
+        item => item.article.code === action.payload.code,
+      );
+      if (existing >= 0) {
+        state.cart[existing].copies += 1;
+      } else {
+        state.cart.push({ article: action.payload, copies: 1 });
+      }
+      state.result = null;
+      state.error = null;
+    },
+    removeFromCart: (state, action: PayloadAction<string>) => {
+      state.cart = state.cart.filter(
+        item => item.article.code !== action.payload,
+      );
+    },
+    updateCartCopies: (
+      state,
+      action: PayloadAction<{ code: string; copies: number }>,
+    ) => {
+      const item = state.cart.find(i => i.article.code === action.payload.code);
+      if (item) item.copies = Math.max(1, Math.min(99, action.payload.copies));
+    },
+    clearCart: state => {
+      state.cart = [];
+      state.result = null;
+      state.error = null;
+      state.query = '';
+    },
   },
   extraReducers: builder => {
     builder
@@ -72,5 +104,14 @@ const searchSlice = createSlice({
   },
 });
 
-export const { setQuery, setLocalidad, clearSearch } = searchSlice.actions;
+export const {
+  setQuery,
+  setLocalidad,
+  clearSearch,
+  addToCart,
+  removeFromCart,
+  updateCartCopies,
+  clearCart,
+} = searchSlice.actions;
+
 export default searchSlice.reducer;

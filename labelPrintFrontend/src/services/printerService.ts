@@ -5,14 +5,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const DEFAULT_PRINTER_KEY = 'default_printer';
 
 export const printerService = {
-  scan: async (): Promise<{
-    printers: Printer[];
-    defaultPrinter: Printer | null;
-  }> => {
-    const response = await api.get('/printers/scan');
-    return response.data;
-  },
-
   getDefault: async (): Promise<Printer | null> => {
     try {
       const stored = await AsyncStorage.getItem(DEFAULT_PRINTER_KEY);
@@ -23,8 +15,18 @@ export const printerService = {
   },
 
   saveDefault: async (printer: Printer): Promise<void> => {
+    // Solo guarda localmente, sin llamar al backend
     await AsyncStorage.setItem(DEFAULT_PRINTER_KEY, JSON.stringify(printer));
-    await api.post('/printers/default', { printer });
+  },
+
+  scan: async (): Promise<{
+    printers: Printer[];
+    defaultPrinter: Printer | null;
+  }> => {
+    const response = await api.get('/printers/scan');
+    // Ignora el defaultPrinter del servidor, usa el local
+    const defaultPrinter = await printerService.getDefault();
+    return { printers: response.data.printers, defaultPrinter };
   },
 
   print: async (

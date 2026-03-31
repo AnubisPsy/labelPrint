@@ -8,6 +8,11 @@ export interface Article {
   category?: string;
 }
 
+export interface CartItem {
+  article: Article;
+  copies: number;
+}
+
 export interface Printer {
   id: string;
   name: string;
@@ -23,6 +28,6 @@ export interface PrintJob {
 }
 
 export type RootStackParamList = {
-  Search: undefined,
-  PrintPreview: { article: Article },
+  Search: undefined;
+  PrintPreview: { cart: CartItem[] };
 };

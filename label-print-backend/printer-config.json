@@ -1,0 +1,9 @@
+{
+  "defaultPrinter": {
+    "id": "printer-1",
+    "name": "TSC TE210 (192.168.1.43)",
+    "ip": "192.168.1.43",
+    "port": 9100,
+    "isOnline": true
+  }
+}

@@ -7,7 +7,7 @@ const preciosRoutes = require("./routes/precios");
 const printersRoutes = require("./routes/printers");
 
 const app = express();
-const PORT = process.env.PORT || 9090;
+const PORT = process.env.PORT || 5454;
 const HOST = process.env.HOST || "0.0.0.0";
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
