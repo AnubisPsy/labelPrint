@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -53,7 +54,11 @@ export default function PrintPreviewScreen() {
   // Modal cambiar impresora
   const [showPrinterModal, setShowPrinterModal] = useState(false);
 
-  // Carga la impresora predeterminada al abrir (sin escanear la red todavía)
+  // Modal nombre de impresora
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [printerToName, setPrinterToName] = useState<Printer | null>(null);
+  const [customName, setCustomName] = useState('');
+
   useEffect(() => {
     dispatch(loadDefaultPrinter());
   }, [dispatch]);
@@ -71,18 +76,29 @@ export default function PrintPreviewScreen() {
     [dispatch],
   );
 
-  const handleSetDefault = useCallback(
-    (printer: Printer) => {
-      dispatch(saveDefaultPrinter(printer));
-      dispatch(selectPrinter(printer));
-      setShowPrinterModal(false);
-      Alert.alert(
-        'Predeterminada',
-        `${printer.name} guardada como impresora predeterminada.`,
-      );
-    },
-    [dispatch],
-  );
+  // Al tocar la estrella, abre el modal para poner nombre
+  const handleRequestSetDefault = useCallback((printer: Printer) => {
+    setPrinterToName(printer);
+    setCustomName(printer.name);
+    setShowNameModal(true);
+  }, []);
+
+  // Confirma el nombre y guarda como predeterminada
+  const handleConfirmName = useCallback(() => {
+    if (!printerToName) return;
+    const named: Printer = {
+      ...printerToName,
+      name: customName.trim() || printerToName.name,
+    };
+    dispatch(saveDefaultPrinter(named));
+    dispatch(selectPrinter(named));
+    setShowNameModal(false);
+    setShowPrinterModal(false);
+    Alert.alert(
+      'Predeterminada',
+      `"${named.name}" guardada como impresora predeterminada.`,
+    );
+  }, [printerToName, customName, dispatch]);
 
   const handleChangeCopies = useCallback((code: string, delta: number) => {
     setCart(prev =>
@@ -338,9 +354,10 @@ export default function PrintPreviewScreen() {
                           {printer.ip}:{printer.port}
                         </Text>
                       </View>
+                      {/* Estrella → abre modal para poner nombre */}
                       <TouchableOpacity
                         style={styles.defaultBtn}
-                        onPress={() => handleSetDefault(printer)}
+                        onPress={() => handleRequestSetDefault(printer)}
                       >
                         <Icon
                           name="star"
@@ -353,6 +370,41 @@ export default function PrintPreviewScreen() {
                 })}
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal nombre de impresora */}
+      <Modal visible={showNameModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.nameCard}>
+            <Icon name="edit" size={28} color={colors.primary} />
+            <Text style={styles.modalTitle}>Nombre de la impresora</Text>
+            <Text style={styles.modalBody}>
+              Asigná un nombre para identificarla fácilmente.
+            </Text>
+            <TextInput
+              style={styles.nameInput}
+              value={customName}
+              onChangeText={setCustomName}
+              placeholder="Ej: Caja 1, Bodega, Mostrador..."
+              placeholderTextColor={colors.textDisabled}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowNameModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={handleConfirmName}
+              >
+                <Text style={styles.modalConfirmText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -468,8 +520,6 @@ const styles = StyleSheet.create({
     minWidth: 32,
     textAlign: 'center',
   },
-
-  // Impresora seleccionada
   selectedPrinterCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -512,8 +562,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   noPrinterText: { ...typography.body, color: colors.textDisabled, flex: 1 },
-
-  // Botones principales
   printBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -543,8 +591,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: '600',
   },
-
-  // Modal impresora
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -589,6 +635,28 @@ const styles = StyleSheet.create({
   printerNameSelected: { color: colors.primary },
   printerIp: { ...typography.bodySmall, color: colors.textSecondary },
   defaultBtn: { padding: spacing.xs },
+
+  // Modal nombre
+  nameCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.md,
+    ...shadows.md,
+  },
+  nameInput: {
+    width: '100%',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    ...typography.body,
+    color: colors.text,
+    backgroundColor: colors.surfaceAlt,
+  },
 
   // Modal advertencia
   warningCard: {
@@ -648,7 +716,7 @@ const styles = StyleSheet.create({
   modalConfirmBtn: {
     flex: 1,
     borderRadius: radius.md,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.sm + 2,
     alignItems: 'center',
   },

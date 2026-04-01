@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -62,6 +62,8 @@ export default function SearchScreen() {
           const code = text.trim();
           if (code) {
             dispatch(setQuery(''));
+            setShowKeyboard(false); // ← ocultar teclado tras escaneo
+            Keyboard.dismiss();
             dispatch(fetchArticleByCode({ code, localidad }));
           }
         }
@@ -103,6 +105,8 @@ export default function SearchScreen() {
     [dispatch],
   );
 
+  const [showKeyboard, setShowKeyboard] = useState(false);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -110,7 +114,7 @@ export default function SearchScreen() {
     >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.localidadCard}>
-          <Text style={styles.label}>SUCURSAL</Text>
+          <Text style={styles.label}>LISTA DE PRECIOS</Text>
           <View style={styles.localidadRow}>
             {LOCALIDADES.map(loc => (
               <TouchableOpacity
@@ -146,9 +150,10 @@ export default function SearchScreen() {
               placeholder="Escanee o escriba el código"
               placeholderTextColor={colors.textDisabled}
               autoFocus={false}
-              showSoftInputOnFocus={false}
+              showSoftInputOnFocus={showKeyboard}
               returnKeyType="search"
               autoCapitalize="characters"
+              onPressIn={() => setShowKeyboard(true)}
             />
             {query.length > 0 && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
