@@ -15,7 +15,6 @@ export const printerService = {
   },
 
   saveDefault: async (printer: Printer): Promise<void> => {
-    // Solo guarda localmente, sin llamar al backend
     await AsyncStorage.setItem(DEFAULT_PRINTER_KEY, JSON.stringify(printer));
   },
 
@@ -24,7 +23,6 @@ export const printerService = {
     defaultPrinter: Printer | null;
   }> => {
     const response = await api.get('/printers/scan');
-    // Ignora el defaultPrinter del servidor, usa el local
     const defaultPrinter = await printerService.getDefault();
     return { printers: response.data.printers, defaultPrinter };
   },
@@ -33,7 +31,8 @@ export const printerService = {
     article: any,
     printer: Printer,
     copies: number,
+    hidePrice: boolean = false,
   ): Promise<void> => {
-    await api.post('/printers/print', { article, printer, copies });
+    await api.post('/printers/print', { article, printer, copies, hidePrice });
   },
 };

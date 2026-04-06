@@ -1,4 +1,6 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+
 import {
   View,
   Text,
@@ -47,37 +49,44 @@ export default function SearchScreen() {
   );
   const inputRef = useRef<TextInput>(null);
   const lastChangeTime = useRef<number>(0);
+  const [showKeyboard, setShowKeyboard] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }, []),
+  );
 
   const handleChangeText = useCallback(
     (text: string) => {
       dispatch(setQuery(text));
-      lastChangeTime.current = Date.now();
 
+      if (showKeyboard) return; // usuario escribiendo → solo actualiza el texto
+
+      lastChangeTime.current = Date.now();
       setTimeout(() => {
         if (Date.now() - lastChangeTime.current >= 100) {
           const code = text.trim();
           if (code) {
             dispatch(setQuery(''));
-            setShowKeyboard(false); // ← ocultar teclado tras escaneo
+            setShowKeyboard(false);
             Keyboard.dismiss();
             dispatch(fetchArticleByCode({ code, localidad }));
           }
         }
       }, 100);
     },
-    [dispatch, localidad],
+    [dispatch, localidad, showKeyboard],
   );
 
   const handleSearch = useCallback(() => {
     const code = query.trim();
     if (!code) return;
+    setShowKeyboard(false); // ← oculta el teclado
     Keyboard.dismiss();
+    dispatch(setQuery('')); // ← limpia el label
     dispatch(fetchArticleByCode({ code, localidad }));
-    setTimeout(() => inputRef.current?.focus(), 300);
+    setTimeout(() => inputRef.current?.focus(), 300); // ← vuelve el autofocus
   }, [dispatch, query, localidad]);
 
   const handleClear = useCallback(() => {
@@ -104,8 +113,6 @@ export default function SearchScreen() {
     (loc: Localidad) => dispatch(setLocalidad(loc)),
     [dispatch],
   );
-
-  const [showKeyboard, setShowKeyboard] = useState(false);
 
   return (
     <KeyboardAvoidingView

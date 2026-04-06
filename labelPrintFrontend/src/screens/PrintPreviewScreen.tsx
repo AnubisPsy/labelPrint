@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
+
 import {
   View,
   Text,
@@ -9,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Switch,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -46,6 +48,7 @@ export default function PrintPreviewScreen() {
   const [cart, setCart] = useState<CartItem[]>(initialCart);
   const [printing, setPrinting] = useState(false);
   const [printed, setPrinted] = useState(false);
+  const [hidePrice, setHidePrice] = useState(false);
 
   // Modal advertencia volver
   const [showWarning, setShowWarning] = useState(false);
@@ -76,14 +79,12 @@ export default function PrintPreviewScreen() {
     [dispatch],
   );
 
-  // Al tocar la estrella, abre el modal para poner nombre
   const handleRequestSetDefault = useCallback((printer: Printer) => {
     setPrinterToName(printer);
     setCustomName(printer.name);
     setShowNameModal(true);
   }, []);
 
-  // Confirma el nombre y guarda como predeterminada
   const handleConfirmName = useCallback(() => {
     if (!printerToName) return;
     const named: Printer = {
@@ -129,7 +130,12 @@ export default function PrintPreviewScreen() {
     setPrinting(true);
     try {
       for (const item of cart) {
-        await printerService.print(item.article, selected, item.copies);
+        await printerService.print(
+          item.article,
+          selected,
+          item.copies,
+          hidePrice,
+        );
       }
       const total = cart.reduce((acc, i) => acc + i.copies, 0);
       Alert.alert(
@@ -144,7 +150,7 @@ export default function PrintPreviewScreen() {
     } finally {
       setPrinting(false);
     }
-  }, [selected, cart]);
+  }, [selected, cart, hidePrice]);
 
   const handleGoBack = useCallback(async () => {
     if (printed) {
@@ -259,6 +265,20 @@ export default function PrintPreviewScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Switch ocultar precio */}
+        <View style={styles.switchRow}>
+          <View style={styles.switchInfo}>
+            <Icon name="money-off" size={20} color={colors.textSecondary} />
+            <Text style={styles.switchLabel}>Imprimir sin precio</Text>
+          </View>
+          <Switch
+            value={hidePrice}
+            onValueChange={setHidePrice}
+            trackColor={{ false: colors.border, true: colors.primaryLight }}
+            thumbColor={hidePrice ? colors.primary : colors.textDisabled}
+          />
+        </View>
+
         {/* Botón imprimir */}
         <TouchableOpacity
           style={[
@@ -354,7 +374,6 @@ export default function PrintPreviewScreen() {
                           {printer.ip}:{printer.port}
                         </Text>
                       </View>
-                      {/* Estrella → abre modal para poner nombre */}
                       <TouchableOpacity
                         style={styles.defaultBtn}
                         onPress={() => handleRequestSetDefault(printer)}
@@ -562,6 +581,21 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   noPrinterText: { ...typography.body, color: colors.textDisabled, flex: 1 },
+
+  // Switch
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+    ...shadows.sm,
+  },
+  switchInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  switchLabel: { ...typography.body, color: colors.text },
+
   printBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -570,7 +604,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: spacing.md + 2,
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     ...shadows.md,
   },
   printBtnDisabled: { backgroundColor: colors.textDisabled },
@@ -635,8 +669,6 @@ const styles = StyleSheet.create({
   printerNameSelected: { color: colors.primary },
   printerIp: { ...typography.bodySmall, color: colors.textSecondary },
   defaultBtn: { padding: spacing.xs },
-
-  // Modal nombre
   nameCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -657,8 +689,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surfaceAlt,
   },
-
-  // Modal advertencia
   warningCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
