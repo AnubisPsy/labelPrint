@@ -1,11 +1,5 @@
 import axios from 'axios';
 
-// Cambiá esta IP por la del servidor cuando el backend esté listo
-//const BASE_URL = 'http://192.168.1.100:3000/api';
-//const BASE_URL = 'http://192.168.0.233:9090/api';
-//const BASE_URL = 'http://10.0.2.2:9090/api';
-//const BASE_URL = 'http://0.0.0.0:9090/api';
-//const BASE_URL = 'http://192.168.1.219:9090/api';
 const BASE_URL = 'http://192.168.0.233:5454/api';
 
 const api = axios.create({
@@ -14,6 +8,20 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+import NetInfo from '@react-native-community/netinfo';
+
+api.interceptors.request.use(async config => {
+  try {
+    const state = await Promise.race([
+      NetInfo.fetch(),
+      new Promise(resolve => setTimeout(() => resolve(null), 500)),
+    ]);
+    const ip = (state as any)?.details?.ipAddress;
+    if (ip) config.headers['x-local-ip'] = ip;
+  } catch {}
+  return config;
 });
 
 api.interceptors.response.use(

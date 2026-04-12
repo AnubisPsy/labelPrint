@@ -61,7 +61,21 @@ function barcodeCenterX(text, module = 3, areaWidth = 386) {
 
 async function scanPrinters(req, res) {
   try {
-    const base = getNetworkRange();
+    // Lee la IP del celular para escanear su red local en lugar de la del servidor
+    const raw =
+      req.headers["x-local-ip"] ||
+      req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
+      req.socket.remoteAddress ||
+      "";
+    const ip = raw.replace(/^::ffff:/, "");
+    const parts = ip.split(".");
+    const base =
+      parts.length === 4
+        ? `${parts[0]}.${parts[1]}.${parts[2]}`
+        : getNetworkRange();
+
+    console.log(`Escaneando red del cliente: ${base}.x`);
+
     const promises = [];
     for (let i = 1; i <= 254; i++) promises.push(checkPrinter(`${base}.${i}`));
     const results = await Promise.all(promises);
@@ -151,7 +165,7 @@ function generateCalibration() {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-function generateTSPL(article, copies) {
+function generateTSPL(article, copies, hidePrice = false) {
   if (CALIBRATE) return generateCalibration();
 
   // Ancho real por carácter de CAL_LG — ajustar después de calibrar
@@ -178,13 +192,15 @@ function generateTSPL(article, copies) {
 
     `TEXT ${centerX(barcodeValue, 12)},52,"CAL_SM",0,1,1,"${barcodeValue}"`,
 
-    // Imprime el texto dos veces desplazado 1 dot para simular negrita más gruesa
-    `TEXT ${centerX(price, CAL_LG_CHAR_WIDTH)},66,"CAL_LG",0,1,1,"${price}"`,
-    `TEXT ${centerX(price, CAL_LG_CHAR_WIDTH) + 1},66,"CAL_LG",0,1,1,"${price}"`,
-    `TEXT ${centerX(price, CAL_LG_CHAR_WIDTH) + 2},66,"CAL_LG",0,1,1,"${price}"`,
+    ...(!hidePrice
+      ? [
+          `TEXT ${centerX(price, CAL_LG_CHAR_WIDTH)},66,"CAL_LG",0,1,1,"${price}"`,
+          `TEXT ${centerX(price, CAL_LG_CHAR_WIDTH) + 1},66,"CAL_LG",0,1,1,"${price}"`,
+          `TEXT ${centerX(price, CAL_LG_CHAR_WIDTH) + 2},66,"CAL_LG",0,1,1,"${price}"`,
+        ]
+      : []),
 
     `TEXT 0,132,"CAL_SM",0,1,1,"${article.code}"`,
-
     `TEXT 0,155,"CAL_SM",0,1,1,"${desc}"`,
 
     `PRINT ${copies},1`,
@@ -194,13 +210,13 @@ function generateTSPL(article, copies) {
 
 async function printLabel(req, res) {
   try {
-    const { article, printer, copies = 1 } = req.body;
+    const { article, printer, copies = 1, hidePrice = false } = req.body;
     if (!article || !printer || !printer.ip) {
       return res
         .status(400)
         .json({ message: "Datos incompletos para imprimir" });
     }
-    const tspl = generateTSPL(article, copies);
+    const tspl = generateTSPL(article, copies, hidePrice);
     await sendToPrinter(printer.ip, printer.port || PRINTER_PORT, tspl);
     res.json({ message: `${copies} etiqueta(s) enviadas a ${printer.ip}` });
   } catch (error) {
